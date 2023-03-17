@@ -14,11 +14,12 @@
 
         function drawCurrent(latCurr, lonCurr) {
             // Create a marker for the user's location
+            if (current != null) current.setMap(null)
             let client = new google.maps.Marker({
                 position: {lat: latCurr, lng: lonCurr},
                 map: map,
                 label: {
-                    color: 'white',
+                    color: 'LawnGreen',
                     fontWeight: 'bold',
                     text: "{{client.get('name')}}",
                 },

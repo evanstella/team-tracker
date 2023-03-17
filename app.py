@@ -1,7 +1,7 @@
 from flask import Flask, render_template, make_response, send_from_directory, redirect, url_for, request, flash, session, jsonify
 import time, json
 import bleach
-import datetime
+import datetime, pytz
 
 import Client
 from Authorized import AUTHORIZED_TOKENS, secret_key
@@ -9,6 +9,8 @@ from Authorized import AUTHORIZED_TOKENS, secret_key
 app = Flask(__name__)
 
 app.secret_key = secret_key
+
+timeZ_Ny = pytz.timezone('America/New_York')
 
 @app.route('/')
 def main():
@@ -54,7 +56,7 @@ def report():
         return jsonify(success=False)
     
     client.online = True
-    client.last_checkin = datetime.datetime.now()
+    client.last_checkin = datetime.datetime.now(timeZ_Ny)
     client.lat = lat
     client.lon = lon
 
