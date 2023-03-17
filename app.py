@@ -1,5 +1,7 @@
 from flask import Flask, render_template, make_response, send_from_directory, redirect, url_for, request, flash, session, jsonify
 import time, json
+import bleach
+
 import Client
 from Authorized import AUTHORIZED_TOKENS, secret_key
 
@@ -109,8 +111,38 @@ def units():
     return jsonify(active_units)
 
 
+@app.route('/update_unit', methods=['POST'])
+def update():
+    token = session.get('token')
+    if token == None:
+        return redirect('/')
+
+    client = AUTHORIZED_TOKENS[token]
+    if (not client.admin):
+        return jsonify(success=False)
+
+    try:
+        content = request.json
+        name  = content.get('name')
+        notes = content.get('notes')
+    except:
+        print("update error from client")
+        return jsonify(success=False)
+
+    for tok in AUTHORIZED_TOKENS.keys():
+        unit = AUTHORIZED_TOKENS[tok]
+        if (unit.name == bleach.clean(name)):
+            unit.notes = bleach.clean(notes)
+
+    return redirect('/map')
+
+
+
 if __name__ == "__main__":
     client = AUTHORIZED_TOKENS[11872584467618672260]
     client.lat = 38.870615
+    client.lon = -77.119351
+    client = AUTHORIZED_TOKENS[10363704738994368361]
+    client.lat = 38.880625
     client.lon = -77.119351
     app.run(debug=True)

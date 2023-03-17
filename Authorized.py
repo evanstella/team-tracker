@@ -9,6 +9,6 @@ AUTHORIZED_TOKENS = {
     10363704738994368361 : Client("2PLT" , "friendlyPLT.png"),
     46822945588592094870 : Client("3PLT" , "friendlyPLT.png"),
     90801850865629700547 : Client("4PLT" , "friendlyPLT.png"),
-    84937409919153050228 : Client("TOC"  , None),
-    12104173386671383178 : Client("RESUP", None),
+    84937409919153050228 : Client("TOC"  , "friendlyBNHQ.png", admin=True),
+    12104173386671383178 : Client("RESUP", "friendlyPLT.png"),
 }

@@ -2,9 +2,10 @@
 <html>
   <head>
     <title>Unit Locations</title>
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBFldzjXB6fdzgn8RUwsFoAv_Y1l7DZCks"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBFldzjXB6fdzgn8RUwsFoAv_Y1l7DZCks&libraries=geometry"></script>
     <script>
 
+        var current = null
         var markers = []
         var map = null
         var URL = "http://127.0.0.1:5000"
@@ -38,6 +39,7 @@
             });
 
             markers.push(client)
+            current = client
         }
 
         function drawMarkers(markersJson) {
@@ -101,7 +103,8 @@
 
                 infoContent = 
                     '<p>' + MGRSString(lat, lon) + '</p>' +
-                    '<p>Last report: ' + unitsJson[i].checkin + '</p>'
+                    '<p>Last report: ' + unitsJson[i].checkin + '</p>' +
+                    '<p>Notes: ' + unitsJson[i].notes + '</p>'
 
                 let infowindow = new google.maps.InfoWindow({
                     content: infoContent,
@@ -111,6 +114,30 @@
                         anchor: marker,
                         map,
                     });
+                    {% if client.get("admin") == true %}
+                    document.getElementById('textBox').style.display = 'block';
+                    document.getElementById('textBoxTitle').innerHTML = unitsJson[i].name
+                    document.getElementById('textBoxPrompt').innerHTML = "Update unit notes:";
+                    document.getElementById('textBoxInput').value = unitsJson[i].notes
+                    document.getElementById('textBoxSubmit').onclick = function() {
+                        fetch(URL + '/update_unit', {
+                            method: 'POST',
+                            body: JSON.stringify({
+                                name: unitsJson[i].name,
+                                notes: document.getElementById('textBoxInput').value
+                            }),
+                            headers: {
+                                'Content-Type': 'application/json'
+                            }
+                        });
+                        location.reload()
+                    }
+                    {% else %}
+                    document.getElementById('navbox').style.display = 'flex';
+                    document.getElementById('navboxPrompt').innerHTML = 'Navigate to ' + unitsJson[i].name + ':'
+                    document.getElementById('navboxDistance').innerHTML = Math.round(getDistance(marker.position, current.position)) + 'm'
+                    document.getElementById('navboxDirection').innerHTML = Math.round(getHeading(current.position, marker.position)) + ' deg';
+                    {% endif %}
                 });
 
                 markers.push(marker)
@@ -152,24 +179,38 @@
 
         function initMap() {
             // Create a new map centered on the user's current location
+            var currentPosition = document.getElementById('currentPosValue')
             navigator.geolocation.getCurrentPosition(function(position) {
-                    map = new google.maps.Map(document.getElementById('map'), {
-                    center: {lat: position.coords.latitude, lng: position.coords.longitude},
+                let mapSettings = {
                     zoom: 15,
+                    center: {lat: position.coords.latitude, lng: position.coords.longitude},
+                    disableDefaultUI: true,
+                    mapTypeControl: false,
                     mapTypeId: 'satellite' // Set the map type to satellite
-                });
+
+                }
+                map = new google.maps.Map(document.getElementById('map'), mapSettings);
+
+                mapSettings.gestureHandling = 'greedy';
+                map.setOptions(mapSettings);
 
                 sendlocation(position.coords.latitude, position.coords.longitude)
                 fetchAndDrawMarkers(position.coords.latitude, position.coords.longitude)
+                currentPosition.innerHTML = MGRSString(position.coords.latitude, position.coords.longitude)
             });
 
-            var refreshButton = document.getElementById('refresh-button')
-            refreshButton.addEventListener('click', function() {
+            setInterval(function(){ 
                 navigator.geolocation.getCurrentPosition(function(position) {
                     sendlocation(position.coords.latitude, position.coords.longitude)
                     fetchAndDrawMarkers(position.coords.latitude, position.coords.longitude)
                 });
-            });
+            }, 1000*60*5);
+
+            setInterval(function(){ 
+                navigator.geolocation.getCurrentPosition(function(position) {
+                    currentPosition.innerHTML = MGRSString(position.coords.latitude, position.coords.longitude)
+                });
+            }, 5*1000);
         }
 
         function sendlocation(lat, lon) {
@@ -271,49 +312,151 @@
             return [true,lat,lng];
         }
 
+        function getDistance(p1, p2) {
+            var rad = function(x) { return x * Math.PI / 180; };
+            var R = 6378137; // Earth’s mean radius in meter
+            var dLat = rad(p2.lat() - p1.lat());
+            var dLong = rad(p2.lng() - p1.lng());
+            var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                Math.cos(rad(p1.lat())) * Math.cos(rad(p2.lat())) *
+                Math.sin(dLong / 2) * Math.sin(dLong / 2);
+            var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            var d = R * c;
+            return d; // returns the distance in meter
+        };
+
+        function getHeading(from, to) {
+            return (google.maps.geometry.spherical.computeHeading(from, to) + 360) % 360
+        }
+
+        function closeTextBox() {
+            document.getElementById('textBox').style.display = 'none';
+        }
+
+        function closeNavBox() {
+            document.getElementById('navbox').style.display = 'none';
+        }
     </script>
     <style>
-      #map {
-        height: calc(100vh - 40px); /* Adjust the height to make space for the form */
-        width: 100%;
-      }
-      #form {
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        width: 100%;
-        height: 40px;
-        background-color: #f2f2f2;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-      }
-      input[type="text"] {
-        margin: 0 10px;
-        padding: 10px;
-        border: none;
-        border-radius: 5px;
-        font-size: 16px;
-        outline: none;
-      }
-      input[type="submit"] {
-        padding: 5px 10px;
-        border: none;
-        border-radius: 5px;
-        font-size: 16px;
-        background-color: #4CAF50;
-        color: white;
-        cursor: pointer;
-        outline: none;
-      }
+        html, body, #map {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            height: 100%;
+            margin: 10;
+            padding: 0;
+        }
+        #textBox {
+            display: none;
+            position: absolute;
+            top: 50%;
+            right: 20px;
+            transform: translateY(-50%);
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            flex-wrap: wrap;
+            justify-content: space-between;
+            padding: 5px;
+            border: 1px solid black;
+            z-index: 1;
+            width: 300px;
+        }
+
+        #textBox textarea {
+            width: 100%;
+            height: 200px;
+        }
+
+        .button {
+            padding: 10px 20px;
+            border-radius: 5px;
+            background-color: #f2f2f2;
+            font-size: 16px;
+            font-weight: bold;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.2s ease-in-out;
+        }
+        #textBox-buttons {
+            text-align: center;
+            margin-top: 5px;
+        }
+        #navbox {
+            display: none;
+            position: absolute;
+            padding : 5px;
+            padding-top: 10px;
+            flex-direction: row;
+            font-size: xx-large;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 600px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+        }
+        #navbox-p {
+            flex-basis: calc(33.33% - 10px);
+            margin: 0;
+            font-weight: bold;
+            color: #333;
+            text-align: center;
+            padding: 10px;
+            border-radius: 5px;
+            background-color: #f2f2f2;
+            transition: background-color 0.2s ease-in-out;
+        }
+        #navbox-p:last-child {
+            margin-right: 0;
+        }
+        #currentPos {
+            display: block;
+            position: absolute;
+            padding : 5px;
+            padding-top: 10px;
+            font-size: xx-large;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 600px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            text-align: center;
+        }
+
+
     </style>
     </head>
         <body onload="initMap()">
             <div id="map"></div>
-            <div id="form">
-                <form>
-                    <input type="button" value="Refresh" id="refresh-button">
-                </form>
+            <div id="textBox">
+                <h2 id="textBoxTitle">Title</h2>
+                <p id="textBoxPrompt">Add Unit Notes</p>
+                <textarea id="textBoxInput"></textarea>
+                <div id="textBox-buttons">
+                    <button class="button" onclick="closeTextBox()">Close</button>
+                    <button class="button" id="textBoxSubmit">Submit</button>
+                </div>
+            </div>
+            {% if client.get("admin") == false %}
+            <div id="currentPos">
+                <p id="currentPosValue">Current Position</p>
+            </div>
+            {% endif %}
+            <div id="navbox" class="navigator">
+                <p id="navboxPrompt">Add Unit Notes</p>
+                <p id="navboxDistance">Add Unit Notes</p>
+                <p id="navboxDirection">Add Unit Notes</p>
+                <button id="navboxButton" class="button" onclick="closeNavBox()">Close</button>
             </div>
         </body>
 </html>
