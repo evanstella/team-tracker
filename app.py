@@ -1,22 +1,116 @@
-from flask import Flask, render_template, make_response, send_from_directory
+from flask import Flask, render_template, make_response, send_from_directory, redirect, url_for, request, flash, session, jsonify
+import time, json
+import Client
+from Authorized import AUTHORIZED_TOKENS, secret_key
 
 app = Flask(__name__)
 
+# you thought this was enterprise-grade???? WRONG
+app.secret_key = secret_key
 
 @app.route('/')
 def main():
     return render_template('index.html')
 
+@app.route('/login', methods=['POST'])
+def login():
+    try:
+        token_str = request.form.get('token')
+        desig_str = request.form.get('designation')
+    except:
+        return render_template('index.html', message="TOKEN INVALID!!!\n")
 
-@app.route('/post_worker.js')
-def post_worker():
-    response=make_response(send_from_directory('static','post_worker.js'))
-    #change the content header file. Can also omit; flask will handle correctly.
-    response.headers['Content-Type'] = 'application/javascript'
-    return response
+    try:
+        token = int(token_str)
+    except (ValueError, TypeError):
+        return render_template('index.html', message="TOKEN INVALID!!!\n")
+    
+    client = AUTHORIZED_TOKENS.get(token)
+    if (client == None or client.name != desig_str):
+        return render_template('index.html', message="TOKEN INVALID!!!\n")
 
-# @app.route('/push',methods = ['POST'])
-# def post_location()
+    session['token'] = token
+        
+    return redirect('/map')
+
+
+@app.route('/report', methods=['POST'])
+def report():
+    token = session.get('token')
+    if token == None:
+        return redirect('/')
+
+    client = AUTHORIZED_TOKENS[token]
+
+    try:
+        content = request.json
+        lat = float(content.get('latitude'))
+        lon = float(content.get('longitude'))
+    except:
+        print("Report error from client")
+        return jsonify(success=False)
+    
+    client.online = True
+    client.last_checkin = time.time()
+    client.lat = lat
+    client.lon = lon
+
+    return jsonify(success=True)
+
+
+@app.route('/map')
+def map():
+    token = session.get('token')
+    if token == None:
+        return redirect('/')
+
+    client = AUTHORIZED_TOKENS[token]
+
+    return render_template('map.html', client=client.to_dict())
+
+
+@app.route('/markers')
+def markers():
+    token = session.get('token')
+    if token == None:
+        return redirect('/')
+
+    client = AUTHORIZED_TOKENS[token]
+
+    try:
+        f = open("./markers.json")
+        markers = json.load(f)
+    except:
+        return jsonify(success=False)
+
+    return jsonify(markers)
+
+
+@app.route('/units')
+def units():
+    token = session.get('token')
+    if token == None:
+        return redirect('/')
+
+    client = AUTHORIZED_TOKENS[token]
+
+    active_units = []
+
+    for tok in AUTHORIZED_TOKENS.keys():
+        if (tok == token):
+            continue
+
+        unit = AUTHORIZED_TOKENS[tok]
+        if (unit.lat == None or unit.lon == None):
+            continue
+
+        active_units.append(unit.to_dict()) 
+
+    return jsonify(active_units)
+
 
 if __name__ == "__main__":
-    app.run(debug=True, ssl_context=('cert.pem', 'key.pem'))
+    client = AUTHORIZED_TOKENS[11872584467618672260]
+    client.lat = 38.870615
+    client.lon = -77.119351
+    app.run(debug=True)

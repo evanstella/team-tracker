@@ -1,27 +1,139 @@
 <!DOCTYPE html>
 <html>
     <head>
+        <title>Login Page</title>
         <meta charset="UTF-8">
-        <title>Display Time</title>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
     </head>
-    <body>
-        <script>
-
-        // Ensure that the browser supports the service worker API
-        if (navigator.serviceWorker) {
-            // Start registration process on every page load
-            window.addEventListener('load', () => {
-                navigator.serviceWorker
-                    // The register function takes as argument
-                    // the file path to the worker's file
-                    .register('/post_worker.js')
-                    .then(reg => console.log('Service Worker Registered'))
-                    .catch(swErr => console.log(`Service Worker Installation Error: ${swErr}}`));
-                });
-        } else {
-            alert("BAD")
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+        #container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
         }
 
+        #form-container {
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+            padding: 30px;
+            border-radius: 10px;
+            width: 500px;
+            max-width: 100%;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        input[type="text"],
+        textarea {
+            padding: 10px;
+            font-size: 16px;
+            border: 2px solid #ccc;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+
+        input[type="text"]:focus,
+        textarea:focus {
+            border-color: #333;
+        }
+
+        button[type="submit"] {
+            padding: 10px 20px;
+            background-color: #333;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+        }
+
+        button[type="submit"]:hover {
+            background-color: #555;
+        }
+
+        .error-message {
+            color: #f00;
+            margin-top: 10px;
+        }
+    </style>
+    <body>
+        {% if message %}
+            {{ message }}
+        {% endif %}
+        <form id="report" action="http://127.0.0.1:5000/login" method="post">
+            <label for="token">Access Token:</label>
+            <input type="text" id="token" name="token"><br>
+          
+            <label for="designation">Designation:</label>
+            <input type="text" id="designation" name="designation"><br>
+          
+            <button type="submit" id="submitBtn">Submit</button>
+        </form>
+          
+        <script>
+            const form = document.getElementById('report');
+            const submitBtn = document.getElementById('submitBtn');
+            const inputs = form.elements;
+
+            // Load saved values from cookies and populate the form inputs
+            for (let i = 0; i < inputs.length; i++) {
+                if (inputs[i].type !== 'submit') {
+                    const name = inputs[i].name;
+                    const value = getCookie(name);
+                    if (value) {
+                        inputs[i].value = value;
+                    }
+                }
+            }
+
+            submitBtn.addEventListener('click', (event) => {
+                event.preventDefault();
+                // Save the form inputs as cookies
+                for (let i = 0; i < inputs.length; i++) {
+                    if (inputs[i].type !== 'submit') {
+                        const name = inputs[i].name;
+                        const value = inputs[i].value;
+                        setCookie(name, value);
+                    }
+                }
+
+                form.submit();
+            });
+
+            // Helper function to get a cookie value by name
+            function getCookie(name) {
+                const cookies = document.cookie.split('; ');
+                    for (let i = 0; i < cookies.length; i++) {
+                        const parts = cookies[i].split('=');
+                        if (parts[0] === name) {
+                            return decodeURIComponent(parts[1]);
+                        }
+                    }
+                return null;
+            }
+
+            // Helper function to set a cookie value
+            function setCookie(name, value) {
+                const cookie = `${name}=${encodeURIComponent(value)};`;
+                document.cookie = cookie;
+            }
         </script>
-    </body>
+  </body>
 </html>

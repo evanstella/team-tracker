@@ -1,0 +1,26 @@
+[
+    {
+        "name"        : "test 1",
+        "icon"        : "enemyTeam.png",
+        "location"    : "18S UJ 18343 04766",
+        "description" : "test"
+    },
+    {
+        "name"        : "test 2",
+        "icon"        : "enemyTeam.png",
+        "location"    : "18S UJ 19499 04307",
+        "description" : "test"
+    },
+    {
+        "name"        : "test 3",
+        "icon"        : "enemyTeam.png",
+        "location"    : "18S UH 20693 98538",
+        "description" : "test"
+    },
+    {
+        "name"        : "test 4",
+        "icon"        : "enemyTeam.png",
+        "location"    : "18S UJ 15433 06210",
+        "description" : "test"
+    }
+]
