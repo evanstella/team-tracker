@@ -11,6 +11,8 @@
         var URL = "http://127.0.0.1:5000"
         var navLine = null
         var currentInfoWindow
+        var currentTargetMarker = null
+        var currentTargetName = null
 
         function drawCurrent(latCurr, lonCurr) {
             // Create a marker for the user's location
@@ -33,6 +35,22 @@
 
             markers.push(client)
             current = client
+        }
+
+        function updateNav() {
+            document.getElementById('navbox').style.display = 'flex';
+            document.getElementById('navboxPrompt').innerHTML = 'Navigate to ' + currentTargetName + ':'
+            document.getElementById('navboxDistance').innerHTML = Math.round(getDistance(currentTargetMarker.position, current.position)) + 'm'
+            document.getElementById('navboxDirection').innerHTML = Math.round(getHeading(current.position, currentTargetMarker.position)) + ' deg';
+            if (navLine) navLine.setMap(null);
+            navLine = new google.maps.Polyline({
+                path: [current.position, currentTargetMarker.position],
+                geodesic: true,
+                strokeColor: "#FF0000",
+                strokeOpacity: 1.0,
+                strokeWeight: 2,
+            });
+            navLine.setMap(map);
         }
 
         function drawMarkers(markersJson) {
@@ -72,19 +90,9 @@
                     {% if client.get("admin") == true %}
                     // TODO
                     {% else %}
-                    document.getElementById('navbox').style.display = 'flex';
-                    document.getElementById('navboxPrompt').innerHTML = 'Navigate to ' + markersJson[i].name + ':'
-                    document.getElementById('navboxDistance').innerHTML = Math.round(getDistance(marker.position, current.position)) + 'm'
-                    document.getElementById('navboxDirection').innerHTML = Math.round(getHeading(current.position, marker.position)) + ' deg';
-                    if (navLine) navLine.setMap(null);
-                    navLine = new google.maps.Polyline({
-                        path: [current.position, marker.position],
-                        geodesic: true,
-                        strokeColor: "#FF0000",
-                        strokeOpacity: 1.0,
-                        strokeWeight: 2,
-                    });
-                    navLine.setMap(map);
+                    currentTargetMarker = marker
+                    currentTargetName   = markersJson[i].name
+                    updateNav()
                     {% endif %}
                 });
 
@@ -147,19 +155,9 @@
                         location.reload()
                     }
                     {% else %}
-                    document.getElementById('navbox').style.display = 'flex';
-                    document.getElementById('navboxPrompt').innerHTML = 'Navigate to ' + unitsJson[i].name + ':'
-                    document.getElementById('navboxDistance').innerHTML = Math.round(getDistance(marker.position, current.position)) + 'm'
-                    document.getElementById('navboxDirection').innerHTML = Math.round(getHeading(current.position, marker.position)) + ' deg';
-                    if (navLine) navLine.setMap(null);
-                    navLine = new google.maps.Polyline({
-                        path: [current.position, marker.position],
-                        geodesic: true,
-                        strokeColor: "#FF0000",
-                        strokeOpacity: 1.0,
-                        strokeWeight: 2,
-                    });
-                    navLine.setMap(map);
+                    currentTargetMarker = marker
+                    currentTargetName   = unitsJson[i].name
+                    updateNav()
                     {% endif %}
                 });
 
@@ -199,7 +197,6 @@
 
         }
         
-
         function initMap() {
             // Create a new map centered on the user's current location
             var currentPosition = document.getElementById('currentPosValue')
@@ -231,14 +228,14 @@
                     sendlocation(position.coords.latitude, position.coords.longitude)
                     fetchAndDrawMarkers(position.coords.latitude, position.coords.longitude)
                 });
-            }, 1000*60*5);
+            }, 1000*60);
 
             {% if client.get("admin") == false %}
             setInterval(function(){ 
                 navigator.geolocation.getCurrentPosition(function(position) {
                     currentPosition.innerHTML = MGRSString(position.coords.latitude, position.coords.longitude)
                     drawCurrent(position.coords.latitude, position.coords.longitude);
-                    console.log("update")
+                    updateNav()
                 });  
             }, 5*1000);
             {% endif %}
@@ -367,6 +364,8 @@
         function closeNavBox() {
             document.getElementById('navbox').style.display = 'none';
             navLine.setMap(null);
+            currentTargetMarker = null
+            currentTargetName   = null
         }
     </script>
     <style>
