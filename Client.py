@@ -1,3 +1,5 @@
+import datetime
+
 class Client():
     def __init__(self, name, icon, admin=False):
         self.name         = name
@@ -15,7 +17,7 @@ class Client():
             "lat"      : str(self.lat),
             "lon"      : str(self.lon),
             "icon"     : self.icon,
-            "checkin"  : str(self.last_checkin),
+            "checkin"  : "None" if (self.last_checkin == None) else self.last_checkin.strftime("%H:%M %d%b%Y"),
             "notes"    : str(self.notes),
             "admin"    : self.admin
         }
