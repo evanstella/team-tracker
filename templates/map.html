@@ -239,7 +239,7 @@
                 let posBox = document.getElementById('currentPos')
                 sendlocation(position.coords.latitude, position.coords.longitude)
                 lastCheckIn = Date.now()
-                
+
                 fetchAndDrawMarkers(position.coords.latitude, position.coords.longitude)
                 currentPosition.innerHTML = MGRSString(position.coords.latitude, position.coords.longitude)
                 posBox.style.borderColor = 'darkgreen'
@@ -250,15 +250,19 @@
             });
 
             setInterval(function(){ 
-                navigator.geolocation.getCurrentPosition(function(position) {
+                navigator.geolocation.getCurrentPosition(async function(position) {
                     let time = Date.now()
                     if (time - lastCheckIn >= (5 * 60 * 1000)) {
                         let posBox = document.getElementById('currentPos')
-                        posBox.style.borderColor = 'darkred'
-                        sendlocation(position.coords.latitude, position.coords.longitude)
-                        fetchAndDrawMarkers(position.coords.latitude, position.coords.longitude)
-                        lastCheckIn = Date.now()
-                        posBox.style.borderColor = 'darkgreen'
+                        if (posBox != null) posBox.style.borderColor = 'darkred'
+
+                        let response = await sendlocation(position.coords.latitude, position.coords.longitude)
+                        if (response.ok) {
+                            fetchAndDrawMarkers(position.coords.latitude, position.coords.longitude)
+                            lastCheckIn = Date.now()
+
+                            if (posBox != null) posBox.style.borderColor = 'darkgreen'
+                        }
                     }
                     {% if client.get("admin") == false %}
                     currentPosition.innerHTML = MGRSString(position.coords.latitude, position.coords.longitude)
@@ -273,8 +277,8 @@
 
         }
 
-        function sendlocation(lat, lon) {
-            fetch(URL + '/report', {
+        async function sendlocation(lat, lon) {
+            response = fetch(URL + '/report', {
                 method: 'POST',
                 body: JSON.stringify({
                     latitude: lat,
@@ -283,7 +287,7 @@
                 headers: {
                     'Content-Type': 'application/json'
                 }
-            });
+            }).then((response)=>{return response});
         }
 
         function MGRSString (Lat, Long) { 
