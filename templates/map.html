@@ -5,6 +5,7 @@
     <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBFldzjXB6fdzgn8RUwsFoAv_Y1l7DZCks&libraries=geometry"></script>
     <script>
 
+        // client state
         var current = null
         var markers = []
         var map = null
@@ -13,6 +14,7 @@
         var currentInfoWindow
         var currentTargetMarker = null
         var currentTargetName = null
+        var lastCheckIn = null
 
         function drawCurrent(latCurr, lonCurr) {
             // Create a marker for the user's location
@@ -38,6 +40,7 @@
         }
 
         function updateNav() {
+            if (currentTargetMarker == null || currentTargetName == null) return
             document.getElementById('navbox').style.display = 'flex';
             document.getElementById('navboxPrompt').innerHTML = 'Navigate to ' + currentTargetName + ':'
             document.getElementById('navboxDistance').innerHTML = Math.round(getDistance(currentTargetMarker.position, current.position)) + 'm'
@@ -215,6 +218,7 @@
                 map.setOptions(mapSettings);
 
                 sendlocation(position.coords.latitude, position.coords.longitude)
+                lastCheckIn = Date.now()
                 fetchAndDrawMarkers(position.coords.latitude, position.coords.longitude)
                 currentPosition.innerHTML = MGRSString(position.coords.latitude, position.coords.longitude)
                
@@ -223,21 +227,24 @@
                 });
             });
 
-            setInterval(function(){ 
-                navigator.geolocation.getCurrentPosition(function(position) {
-                    sendlocation(position.coords.latitude, position.coords.longitude)
-                    fetchAndDrawMarkers(position.coords.latitude, position.coords.longitude)
-                });
-            }, 1000*60);
-
             {% if client.get("admin") == false %}
             setInterval(function(){ 
                 navigator.geolocation.getCurrentPosition(function(position) {
+                    let time = Date.now()
+                    if (time - lastCheckIn >= (5 * 60 * 1000)) {
+                        sendlocation(position.coords.latitude, position.coords.longitude)
+                        fetchAndDrawMarkers(position.coords.latitude, position.coords.longitude)
+                        lastCheckIn = Date.now()
+                    }
                     currentPosition.innerHTML = MGRSString(position.coords.latitude, position.coords.longitude)
                     drawCurrent(position.coords.latitude, position.coords.longitude);
                     updateNav()
                 });  
             }, 5*1000);
+
+            // make sure this isnt erroneously open
+            document.getElementById('navbox').style.display = 'none';
+
             {% endif %}
         }
 
@@ -482,12 +489,12 @@
             <div id="currentPos">
                 <p id="currentPosValue">Current Position</p>
             </div>
-            {% endif %}
             <div id="navbox" class="navigator">
                 <p id="navboxPrompt">Add Unit Notes</p>
                 <p id="navboxDistance">Add Unit Notes</p>
                 <p id="navboxDirection">Add Unit Notes</p>
                 <button id="navboxButton" class="button" onclick="closeNavBox()">Close</button>
             </div>
+            {% endif %}
         </body>
 </html>

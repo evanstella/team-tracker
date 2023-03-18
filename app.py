@@ -12,6 +12,10 @@ app.secret_key = secret_key
 
 timeZ_Ny = pytz.timezone('America/New_York')
 
+# cache control for images = 3 hours
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 10800
+
+
 @app.route('/')
 def main():
     return render_template('index.html')
