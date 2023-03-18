@@ -242,7 +242,7 @@
 
                 fetchAndDrawMarkers(position.coords.latitude, position.coords.longitude)
                 if (currentPosition) currentPosition.innerHTML = MGRSString(position.coords.latitude, position.coords.longitude)
-                posBox.style.borderColor = 'darkgreen'
+                if (posBox) posBox.style.borderColor = 'darkgreen'
                
                 map.addListener("click", () => { 
                     if (currentInfoWindow) currentInfoWindow.close()
@@ -254,14 +254,14 @@
                     let time = Date.now()
                     if (time - lastCheckIn >= (5 * 60 * 1000)) {
                         let posBox = document.getElementById('currentPos')
-                        if (posBox != null) posBox.style.borderColor = 'darkred'
+                        if (posBox) posBox.style.borderColor = 'darkred'
 
                         let response = await sendlocation(position.coords.latitude, position.coords.longitude)
                         if (response.ok) {
                             fetchAndDrawMarkers(position.coords.latitude, position.coords.longitude)
                             lastCheckIn = Date.now()
 
-                            if (posBox != null) posBox.style.borderColor = 'darkgreen'
+                            if (posBox) posBox.style.borderColor = 'darkgreen'
                         }
                     }
                     {% if client.get("admin") == false %}
@@ -273,7 +273,8 @@
             }, 5*1000);
 
             // make sure this isnt erroneously open
-            document.getElementById('navbox').style.display = 'none';
+            navBox =document.getElementById('navbox')
+            if (navBox) navBox.style.display = 'none';
 
         }
 
