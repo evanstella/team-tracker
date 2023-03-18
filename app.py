@@ -21,8 +21,10 @@ def main():
     return render_template('index.html')
 
 
-@app.route('/login', methods=['POST'])
+@app.route('/login', methods=['GET','POST'])
 def login():
+    if request.method == 'GET':
+        return redirect('/')
     try:
         token_str = request.form.get('token')
         desig_str = request.form.get('designation')
