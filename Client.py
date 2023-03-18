@@ -17,7 +17,7 @@ class Client():
             "lat"      : str(self.lat),
             "lon"      : str(self.lon),
             "icon"     : self.icon,
-            "checkin"  : "None" if (self.last_checkin == None) else self.last_checkin.strftime("%H:%M %d%b%Y"),
+            "checkin"  : "None" if (self.last_checkin == None) else self.last_checkin.strftime("%H:%M %d%B%Y"),
             "notes"    : str(self.notes),
             "admin"    : self.admin
         }

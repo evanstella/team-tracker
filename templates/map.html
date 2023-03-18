@@ -7,6 +7,7 @@
 
         // client state
         var current = null
+        var currentNotes = "None"
         var markers = []
         var map = null
         var URL = "http://127.0.0.1:5000"
@@ -33,6 +34,20 @@
                     origin: new google.maps.Point(0, 0),
                 }
             
+            });
+
+            infoContent = '<p>Notes: ' + currentNotes + '</p>'
+
+            let infowindow = new google.maps.InfoWindow({
+                content: infoContent,
+            });
+            client.addListener("click", () => {
+                if (currentInfoWindow) currentInfoWindow.close()
+                infowindow.open({
+                    anchor: client,
+                    map,
+                });
+                currentInfoWindow = infowindow
             });
 
             markers.push(client)
@@ -107,6 +122,10 @@
         function drawUnits(unitsJson) {
             // Create a marker for the user's location
             for (let i = 0; i < unitsJson.length; i++) {
+                if (unitsJson[i].name == current.name) {
+                    currentNotes = unitsJson[i].notes
+                    continue
+                }
                 let lat = parseFloat(unitsJson[i].lat)
                 let lon = parseFloat(unitsJson[i].lon)
                 let marker = new google.maps.Marker({
@@ -217,35 +236,41 @@
                 mapSettings.gestureHandling = 'greedy';
                 map.setOptions(mapSettings);
 
+                let posBox = document.getElementById('currentPos')
                 sendlocation(position.coords.latitude, position.coords.longitude)
                 lastCheckIn = Date.now()
+                
                 fetchAndDrawMarkers(position.coords.latitude, position.coords.longitude)
                 currentPosition.innerHTML = MGRSString(position.coords.latitude, position.coords.longitude)
+                posBox.style.borderColor = 'darkgreen'
                
                 map.addListener("click", () => { 
                     if (currentInfoWindow) currentInfoWindow.close()
                 });
             });
 
-            {% if client.get("admin") == false %}
             setInterval(function(){ 
                 navigator.geolocation.getCurrentPosition(function(position) {
                     let time = Date.now()
                     if (time - lastCheckIn >= (5 * 60 * 1000)) {
+                        let posBox = document.getElementById('currentPos')
+                        posBox.style.borderColor = 'darkred'
                         sendlocation(position.coords.latitude, position.coords.longitude)
                         fetchAndDrawMarkers(position.coords.latitude, position.coords.longitude)
                         lastCheckIn = Date.now()
+                        posBox.style.borderColor = 'darkgreen'
                     }
+                    {% if client.get("admin") == false %}
                     currentPosition.innerHTML = MGRSString(position.coords.latitude, position.coords.longitude)
                     drawCurrent(position.coords.latitude, position.coords.longitude);
                     updateNav()
+                    {% endif %}
                 });  
             }, 5*1000);
 
             // make sure this isnt erroneously open
             document.getElementById('navbox').style.display = 'none';
 
-            {% endif %}
         }
 
         function sendlocation(lat, lon) {
@@ -421,7 +446,7 @@
         #navbox {
             display: none;
             position: absolute;
-            padding : 5px;
+            padding : 20px;
             padding-top: 10px;
             flex-direction: row;
             font-size: xx-large;
@@ -429,7 +454,7 @@
             left: 50%;
             transform: translateX(-50%);
             width: 90%;
-            max-width: 600px;
+            max-width: 800px;
             background-color: #fff;
             border-radius: 10px;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
@@ -464,6 +489,8 @@
             max-width: 600px;
             background-color: #fff;
             border-radius: 10px;
+            border-style: solid;
+            border-color: darkred;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
             flex-wrap: wrap;
             justify-content: space-between;
