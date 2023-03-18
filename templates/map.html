@@ -241,7 +241,7 @@
                 lastCheckIn = Date.now()
 
                 fetchAndDrawMarkers(position.coords.latitude, position.coords.longitude)
-                currentPosition.innerHTML = MGRSString(position.coords.latitude, position.coords.longitude)
+                if (currentPosition) currentPosition.innerHTML = MGRSString(position.coords.latitude, position.coords.longitude)
                 posBox.style.borderColor = 'darkgreen'
                
                 map.addListener("click", () => { 
