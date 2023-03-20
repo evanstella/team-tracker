@@ -107,12 +107,18 @@ def units():
 
     active_units = []
 
+    timenow = datetime.datetime.now(timeZ_Ny)
+    thresh  = datetime.timedelta(hours=5)
+
     for tok in AUTHORIZED_TOKENS.keys():
-        if (tok == token):
+        unit = AUTHORIZED_TOKENS[tok]
+        if (unit.lat == None or unit.lon == None or unit.last_checkin == None):
             continue
 
-        unit = AUTHORIZED_TOKENS[tok]
-        if (unit.lat == None or unit.lon == None):
+        if (unit.admin):
+            continue
+
+        if (timenow - unit.last_checkin > thresh):
             continue
 
         active_units.append(unit.to_dict()) 
@@ -144,7 +150,6 @@ def update():
             unit.notes = bleach.clean(notes)
 
     return redirect('/map')
-
 
 
 if __name__ == "__main__":

@@ -55,7 +55,7 @@
         }
 
         function updateNav() {
-            if (currentTargetMarker == null || currentTargetName == null) return
+            if (current == null || currentTargetMarker == null || currentTargetName == null) return
             document.getElementById('navbox').style.display = 'flex';
             document.getElementById('navboxPrompt').innerHTML = 'Navigate to ' + currentTargetName + ':'
             document.getElementById('navboxDistance').innerHTML = Math.round(getDistance(currentTargetMarker.position, current.position)) + 'm'
@@ -122,7 +122,7 @@
         function drawUnits(unitsJson) {
             // Create a marker for the user's location
             for (let i = 0; i < unitsJson.length; i++) {
-                if (unitsJson[i].name == current.name) {
+                if (current != null && unitsJson[i].name == current.label.text) {
                     currentNotes = unitsJson[i].notes
                     continue
                 }
@@ -195,7 +195,9 @@
             }
             markers = []
 
+            {% if client.get("admin") == false %}
             drawCurrent(latCurr, lonCurr)
+            {% endif %}
 
             fetch(URL + '/markers', {
                 method: 'GET',
@@ -237,8 +239,10 @@
                 map.setOptions(mapSettings);
 
                 let posBox = document.getElementById('currentPos')
+                {% if client.get("admin") == false %}
                 let response = sendlocation(position.coords.latitude, position.coords.longitude)
                 lastCheckIn = Date.now()
+                {% endif %}
 
                 fetchAndDrawMarkers(position.coords.latitude, position.coords.longitude)
                 if (currentPosition) currentPosition.innerHTML = MGRSString(position.coords.latitude, position.coords.longitude)
@@ -249,6 +253,14 @@
                 });
             });
 
+            {% if client.get("admin") == true %}
+            setInterval(function(){ 
+                fetchAndDrawMarkers(null, null)
+            }, 60 * 1000);
+            {% endif %}
+            
+
+            {% if client.get("admin") == false %}
             setInterval(function(){ 
                 navigator.geolocation.getCurrentPosition(async function(position) {
                     let time = Date.now()
@@ -263,13 +275,12 @@
                         }
                         lastCheckIn = Date.now()
                     }
-                    {% if client.get("admin") == false %}
                     currentPosition.innerHTML = MGRSString(position.coords.latitude, position.coords.longitude)
                     drawCurrent(position.coords.latitude, position.coords.longitude);
                     updateNav()
-                    {% endif %}
                 });  
             }, 5 * 1000);
+            {% endif %}
 
             {% if client.get("admin") == false %}
             // make sure this isnt erroneously open
