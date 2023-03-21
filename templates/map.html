@@ -2,7 +2,7 @@
 <html>
   <head>
     <title>Unit Locations</title>
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBFldzjXB6fdzgn8RUwsFoAv_Y1l7DZCks&libraries=geometry"></script>
+    <script async src="https://maps.googleapis.com/maps/api/js?key=AIzaSyBFldzjXB6fdzgn8RUwsFoAv_Y1l7DZCks&libraries=geometry&callback=initMap"></script>
     <script>
 
         // client state
@@ -16,6 +16,19 @@
         var currentTargetMarker = null
         var currentTargetName = null
         var lastCheckIn = null
+        var timer = null
+        var currentPosition = null
+
+        const geolocationOptions = {
+            enableHighAccuracy: true,
+            maximumAge: 10000,
+            timeout: 4000,
+        };
+
+        function geolocationError() {
+            let posBox = document.getElementById('currentPos')
+            if (posBox) posBox.style.borderColor = 'darkred'
+        }
 
         function drawCurrent(latCurr, lonCurr) {
             // Create a marker for the user's location
@@ -187,7 +200,7 @@
             
         }
 
-        function fetchAndDrawMarkers(latCurr, lonCurr) {
+        async function fetchAndDrawMarkers(latCurr, lonCurr) {
             // clear all current markers
             for (let i = 0; i < markers.length; i++) {
                 markers[i].setMap(null);
@@ -198,7 +211,7 @@
             drawCurrent(latCurr, lonCurr)
             {% endif %}
 
-            fetch(URL + '/markers', {
+            await fetch(URL + '/markers', {
                 method: 'GET',
                 headers: {
                     'Accept': 'application/json'
@@ -208,13 +221,13 @@
                 drawMarkers(markers)
             })
 
-            fetch(URL + '/units', {
+            await fetch(URL + '/units', {
                 method: 'GET',
                 headers: {
                     'Accept': 'application/json'
                 }
             }).then((response) => response.json())
-              .then((units) => {
+            .then((units) => {
                 drawUnits(units)
             })
 
@@ -222,7 +235,7 @@
         
         function initMap() {
             // Create a new map centered on the user's current location
-            var currentPosition = document.getElementById('currentPosValue')
+            currentPosition = document.getElementById('currentPosValue')
             navigator.geolocation.getCurrentPosition(function(position) {
                 let mapSettings = {
                     zoom: 15,
@@ -250,57 +263,65 @@
                 map.addListener("click", () => { 
                     if (currentInfoWindow) currentInfoWindow.close()
                 });
-            });
+            }, geolocationError, geolocationOptions);
 
             {% if client.get("admin") == true %}
             setInterval(function(){ 
                 fetchAndDrawMarkers(null, null)
             }, 60 * 1000);
-            {% endif %}
-            
-
-            {% if client.get("admin") == false %}
-            setInterval(function(){ 
-                navigator.geolocation.getCurrentPosition(async function(position) {
-                    let time = Date.now()
-                    if (time - lastCheckIn >= (60 * 1000)) {
-                        let posBox = document.getElementById('currentPos')
-                        if (posBox) posBox.style.borderColor = 'darkred'
-
-                        let response = await sendlocation(position.coords.latitude, position.coords.longitude)
-                        if (response.ok) {
-                            fetchAndDrawMarkers(position.coords.latitude, position.coords.longitude)
-                            if (posBox) posBox.style.borderColor = 'darkgreen'
-                        }
-                        lastCheckIn = Date.now()
-                    }
-                    currentPosition.innerHTML = MGRSString(position.coords.latitude, position.coords.longitude)
-                    drawCurrent(position.coords.latitude, position.coords.longitude);
-                    updateNav()
-                });  
-            }, 5 * 1000);
-            {% endif %}
-
-            {% if client.get("admin") == false %}
+            {% else %}
             // make sure this isnt erroneously open
             document.getElementById('navbox').style.display = 'none';
 
+            window.addEventListener("focus", async (event) => {periodUpdate()});
+            window.addEventListener("blur",  (event) => {if (timer != null) clearInterval(timer)})
+
             positionBox = document.getElementById('currentPos')
-            positionBox.addEventListener("click", () => {
-                positionBox.style.backgroundColor = "lightgrey"
+            positionBox.addEventListener("click", async () => {
                 navigator.geolocation.getCurrentPosition(async function(position) {
                     let posBox = document.getElementById('currentPos')
+                    if (posBox) posBox.style.borderColor = 'darkred'
+
                     let response = await sendlocation(position.coords.latitude, position.coords.longitude)
                     if (response.ok) {
-                        fetchAndDrawMarkers(position.coords.latitude, position.coords.longitude)
+                        await fetchAndDrawMarkers(position.coords.latitude, position.coords.longitude)
                         if (posBox) posBox.style.borderColor = 'darkgreen'
                     }
                     lastCheckIn = Date.now()
-                    positionBox.style.backgroundColor = "#FFF"
-                });
+                    currentPosition.innerHTML = MGRSString(position.coords.latitude, position.coords.longitude)
+                    drawCurrent(position.coords.latitude, position.coords.longitude);
+                    updateNav()
+                }, geolocationError, geolocationOptions);
             });
 
             {% endif %}
+        }
+
+        async function periodUpdate() {
+            await updateCall()
+            timer = setInterval(function(){ 
+                updateCall()
+            }, 5 * 1000);
+        }
+
+        async function updateCall() {
+            navigator.geolocation.getCurrentPosition(async function(position) {
+                let time = Date.now()
+                if (time - lastCheckIn >= (60 * 1000)) {
+                    let posBox = document.getElementById('currentPos')
+                    if (posBox) posBox.style.borderColor = 'darkred'
+
+                    let response = await sendlocation(position.coords.latitude, position.coords.longitude)
+                    if (response.ok) {
+                        await fetchAndDrawMarkers(position.coords.latitude, position.coords.longitude)
+                        if (posBox) posBox.style.borderColor = 'darkgreen'
+                    }
+                    lastCheckIn = Date.now()
+                }
+                currentPosition.innerHTML = MGRSString(position.coords.latitude, position.coords.longitude)
+                drawCurrent(position.coords.latitude, position.coords.longitude);
+                updateNav()
+            }, geolocationError, geolocationOptions);  
         }
 
         async function sendlocation(lat, lon) {
@@ -534,7 +555,7 @@
 
     </style>
     </head>
-        <body onload="initMap()">
+        <body>
             <div id="map"></div>
             <div id="textBox">
                 <h2 id="textBoxTitle">Title</h2>
