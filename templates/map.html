@@ -300,7 +300,10 @@
         }
 
         async function periodUpdate() {
-            await updateCall()
+            /* first GPS result we get is usually a bit off */
+            navigator.geolocation.getCurrentPosition(async function(position) {
+                await updateCall()
+            }, geolocationError, geolocationOptions);
             timer = setInterval(function(){ 
                 updateCall()
             }, 5 * 1000);
