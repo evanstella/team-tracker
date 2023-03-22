@@ -300,13 +300,18 @@
         }
 
         async function periodUpdate() {
+            let time = Date.now()
+            if (time - lastCheckIn >= (60 * 1000)) {
+                let posBox = document.getElementById('currentPos')
+                if (posBox) posBox.style.borderColor = 'darkred'
+            }
             /* first GPS result we get is usually a bit off */
             navigator.geolocation.getCurrentPosition(async function(position) {
-                await updateCall()
+                timer = setInterval(function(){ 
+                    updateCall()
+                }, 5 * 1000);
             }, geolocationError, geolocationOptions);
-            timer = setInterval(function(){ 
-                updateCall()
-            }, 5 * 1000);
+            
         }
 
         async function updateCall() {
