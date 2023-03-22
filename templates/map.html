@@ -252,13 +252,10 @@
 
                 let posBox = document.getElementById('currentPos')
                 {% if client.get("admin") == false %}
-                let response = sendlocation(position.coords.latitude, position.coords.longitude)
-                lastCheckIn = Date.now()
+                lastCheckIn = 0
                 {% endif %}
 
                 fetchAndDrawMarkers(position.coords.latitude, position.coords.longitude)
-                if (currentPosition) currentPosition.innerHTML = MGRSString(position.coords.latitude, position.coords.longitude)
-                if (posBox) posBox.style.borderColor = 'darkgreen'
                
                 map.addListener("click", () => { 
                     if (currentInfoWindow) currentInfoWindow.close()
@@ -578,7 +575,7 @@
             </div>
             {% if client.get("admin") == false %}
             <div id="currentPos">
-                <p id="currentPosValue">Current Position</p>
+                <p id="currentPosValue">Calculating Position...</p>
             </div>
             <div id="navbox" class="navigator">
                 <p id="navboxPrompt">Add Unit Notes</p>
